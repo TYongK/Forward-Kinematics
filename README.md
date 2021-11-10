@@ -18,8 +18,6 @@ Grasshopper sample file can be downloaded from the Repository.
 
 -In order to do dot producto of both rotation matrix and translation matrix,
 
--The matrix uses 4x4 matrix with matrix[3][3] = 1
+-The matrix uses 4x4 matrix(3D Affine Transformation Matrices) with matrix[3][3] = 1
 
-![image](https://user-images.githubusercontent.com/93954052/140992231-b1639a53-35b7-4683-b828-9861e7c31c5a.png)
-
-![image](https://user-images.githubusercontent.com/93954052/140984642-e915051d-1c83-4b4f-9f5d-f13740d88d72.png)
+![image](https://user-images.githubusercontent.com/93954052/141044035-3c848c2d-e33a-4280-9811-f74c50ec0c64.png)
