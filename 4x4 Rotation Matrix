@@ -1,0 +1,207 @@
+using System;
+using System.Collections;
+using System.Collections.Generic;
+
+using Rhino;
+using Rhino.Geometry;
+
+using Grasshopper;
+using Grasshopper.Kernel;
+using Grasshopper.Kernel.Data;
+using Grasshopper.Kernel.Types;
+
+
+
+/// <summary>
+/// This class will be instantiated on demand by the Script component.
+/// </summary>
+public class Script_Instance : GH_ScriptInstance
+{
+#region Utility functions
+  /// <summary>Print a String to the [Out] Parameter of the Script component.</summary>
+  /// <param name="text">String to print.</param>
+  private void Print(string text) { /* Implementation hidden. */ }
+  /// <summary>Print a formatted String to the [Out] Parameter of the Script component.</summary>
+  /// <param name="format">String format.</param>
+  /// <param name="args">Formatting parameters.</param>
+  private void Print(string format, params object[] args) { /* Implementation hidden. */ }
+  /// <summary>Print useful information about an object instance to the [Out] Parameter of the Script component. </summary>
+  /// <param name="obj">Object instance to parse.</param>
+  private void Reflect(object obj) { /* Implementation hidden. */ }
+  /// <summary>Print the signatures of all the overloads of a specific method to the [Out] Parameter of the Script component. </summary>
+  /// <param name="obj">Object instance to parse.</param>
+  private void Reflect(object obj, string method_name) { /* Implementation hidden. */ }
+#endregion
+
+#region Members
+  /// <summary>Gets the current Rhino document.</summary>
+  private readonly RhinoDoc RhinoDocument;
+  /// <summary>Gets the Grasshopper document that owns this script.</summary>
+  private readonly GH_Document GrasshopperDocument;
+  /// <summary>Gets the Grasshopper script component that owns this script.</summary>
+  private readonly IGH_Component Component;
+  /// <summary>
+  /// Gets the current iteration count. The first call to RunScript() is associated with Iteration==0.
+  /// Any subsequent call within the same solution will increment the Iteration count.
+  /// </summary>
+  private readonly int Iteration;
+#endregion
+
+  /// <summary>
+  /// This procedure contains the user code. Input parameters are provided as regular arguments,
+  /// Output parameters as ref arguments. You don't have to assign output parameters,
+  /// they will have a default value.
+  /// </summary>
+  private void RunScript(double a_rot, double b_rot, double c_rot, ref object A)
+  {
+
+
+    double[][] m = MatrixCreate(4, 4);
+
+    //////Define Tree Start//////
+    DataTree<double> doubleTree = new DataTree<double>();
+
+    // Raws = Branches
+    for(int i = 0; i < m.Length;i++)
+    {
+      GH_Path pth = new GH_Path(i);
+
+      // Cols = Index
+      for (int j = 0; j < m[i].Length;j++)
+      {
+        doubleTree.Add(0, pth);
+      }
+    }
+    //////Define Tree End//////
+
+    //////Define xyzRotation Matrix Start//////
+    List<List<double>> matrix_Branches_Xrote = new List<List<double>>();
+    List<List<double>> matrix_Branches_Yrote = new List<List<double>>();
+    List<List<double>> matrix_Branches_Zrote = new List<List<double>>();
+
+    for(int i = 0; i < m.Length;i++)
+    {
+      List<double> rowX = new List<double>();
+      List<double> rowY = new List<double>();
+      List<double> rowZ = new List<double>();
+
+      for (int j = 0; j < m[i].Length;j++)
+      {
+        rowX.Add(0);
+        rowY.Add(0);
+        rowZ.Add(0);
+      }
+      matrix_Branches_Xrote.Add(rowX);
+      matrix_Branches_Yrote.Add(rowY);
+      matrix_Branches_Zrote.Add(rowZ);
+    }
+
+    matrix_Branches_Xrote[0][0] = 1;
+    matrix_Branches_Xrote[1][1] = Math.Cos(a_rot);
+    matrix_Branches_Xrote[1][2] = -1 * Math.Sin(a_rot);
+    matrix_Branches_Xrote[2][1] = Math.Sin(a_rot);
+    matrix_Branches_Xrote[2][2] = Math.Cos(a_rot);
+    matrix_Branches_Xrote[3][3] = 1;
+
+    matrix_Branches_Yrote[0][0] = Math.Cos(b_rot);
+    matrix_Branches_Yrote[0][2] = Math.Sin(b_rot);
+    matrix_Branches_Yrote[1][1] = 1;
+    matrix_Branches_Yrote[2][0] = -1 * Math.Sin(b_rot);
+    matrix_Branches_Yrote[2][2] = Math.Cos(b_rot);
+    matrix_Branches_Yrote[3][3] = 1;
+
+    matrix_Branches_Zrote[0][0] = Math.Cos(c_rot);
+    matrix_Branches_Zrote[0][1] = -1 * Math.Sin(c_rot);
+    matrix_Branches_Zrote[1][0] = Math.Sin(c_rot);
+    matrix_Branches_Zrote[1][1] = Math.Cos(c_rot);
+    matrix_Branches_Zrote[2][2] = 1;
+    matrix_Branches_Zrote[3][3] = 1;
+
+
+    DataTree<double> doubleTree_X = new DataTree<double>();
+    DataTree<double> doubleTree_Y = new DataTree<double>();
+    DataTree<double> doubleTree_Z = new DataTree<double>();
+
+
+    for(int i = 0; i < matrix_Branches_Xrote.Count; i++)
+    {
+      GH_Path pth = new GH_Path(i);
+
+      for(int j = 0; j < matrix_Branches_Xrote[0].Count; j++)
+      {
+        doubleTree_X.Add(matrix_Branches_Xrote[i][j], pth);
+        doubleTree_Y.Add(matrix_Branches_Yrote[i][j], pth);
+        doubleTree_Z.Add(matrix_Branches_Zrote[i][j], pth);
+      }
+    }
+
+    //////Define xyzRotation Matrix End//////
+
+    DataTree<double> doubleTree_XY = MatrixProduct_Grasshopper(doubleTree_X, doubleTree_Y);
+    DataTree<double> doubleTree_XYZ = MatrixProduct_Grasshopper(doubleTree_XY, doubleTree_Z);
+
+    A = doubleTree_XYZ;
+
+  }
+
+  // <Custom additional code> 
+  static double[][] MatrixCreate(int rows, int cols)
+  {
+    double[][] result = new double[rows][];
+
+    for (int i = 0; i < rows; ++i)
+    {
+      result[i] = new double[cols];
+    }
+    return result;
+  }
+
+  //returns "string" or "DataTree<double>"
+  static dynamic MatrixProduct_Grasshopper(DataTree<double> matrixA, DataTree<double> matrixB)
+  {
+    IList<List<double>> matrixA_Branches = matrixA.Branches;
+    int aRows = matrixA_Branches.Count; int aCols = matrixA_Branches[0].Count;
+
+    IList<List<double>> matrixB_Branches = matrixB.Branches;
+    int bRows = matrixB_Branches.Count; int bCols = matrixB_Branches[0].Count;
+
+    if (aCols != bRows)
+    {
+      return "Non-conformable matrices";
+    }
+
+    double[][] result = MatrixCreate(aRows, bCols);
+
+    for (int i = 0; i < aRows; ++i) // each row of A
+    {
+      for (int j = 0; j < bCols; ++j) // each col of B
+      {
+        for (int k = 0; k < aCols; ++k) // could use k less-than bRows
+        {
+          result[i][j] += matrixA_Branches[i][k] * matrixB_Branches[k][j];
+        }
+      }
+    }
+
+    //////Define Tree Start//////
+    DataTree<double> doubleTree = new DataTree<double>();
+    // Raws = Branches
+    for(int i = 0; i < result.Length;i++)
+    {
+      GH_Path pth = new GH_Path(i);
+
+      // Cols = Index
+      for (int j = 0; j < result[i].Length;j++)
+      {
+        doubleTree.Add(result[i][j], pth);
+      }
+    }
+    //////Define Tree End//////
+
+    return doubleTree;
+  }
+
+  // Resource: https://jamesmccaffrey.wordpress.com/2015/03/06/inverting-a-matrix-using-c/
+  // Editor&Developer: Taeyong Kim
+  // </Custom additional code> 
+}
